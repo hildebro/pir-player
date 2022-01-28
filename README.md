@@ -1,5 +1,10 @@
 # pir-player
-Script for raspberry pi to play songs when a motion detector triggers
+Rust program to automatically play songs, when a GPIO-connected PIR sensor 
+detects motion.
+
+## Building from source for Raspberry Pi 0/1
+- install `cross`
+- run `cross build --target arm-unknown-linux-gnueabihf`
 
 ## Installation
 - install vlc
