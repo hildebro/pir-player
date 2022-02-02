@@ -6,7 +6,7 @@ detects motion.
 - install `cross`
 - run `cross build --target arm-unknown-linux-gnueabihf`
 
-## Installation
+## Requirements
 - install vlc
 - copy unit file to .config/systemd/user/
 - enable/start the service

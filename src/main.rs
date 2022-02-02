@@ -1,13 +1,27 @@
-use gpio::{GpioIn};
-use std::{thread, time};
+use gpio::{GpioIn, GpioValue};
+use std::{fs, thread, time};
 
 fn main() {
-    // Let's open GPIO23, e.g. on a Raspberry Pi 2.
-    let mut gpio4 = gpio::sysfs::SysFsGpioInput::open(4).unwrap();
+    // Opening the occupied GPIO pin.
+    let mut gpio_input = gpio::sysfs::SysFsGpioInput::open(4).unwrap();
 
-    // The main thread will simply display the current value of GPIO23 every 500ms.
+    let paths = fs::read_dir("/srv/pir-player-rs/music").unwrap();
+    let mut song_paths: Vec<String> = Vec::new();
+    for path in paths {
+        let song_path = path.unwrap().path().to_str().unwrap().to_string();
+        song_paths.push(song_path);
+    }
+
     loop {
-        println!("GPIO 4: {:?}", gpio4.read_value().unwrap());
+        let value = gpio_input.read_value().unwrap();
+        if value == GpioValue::High {
+            let current_song = match song_paths.pop() {
+                None => "No more songs".to_string(),
+                Some(song) => song,
+            };
+
+            println!("Name: {}", current_song);
+        }
         thread::sleep(time::Duration::from_millis(500));
     }
 }
