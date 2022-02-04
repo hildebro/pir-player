@@ -7,7 +7,13 @@ detects motion.
 - run `cross build --target arm-unknown-linux-gnueabihf`
 
 ## Requirements
-- install vlc
-- copy unit file to .config/systemd/user/
-- enable/start the service
-- for journalctl output, set `Storage` to `persistent` in `/etc/systemd/journald.conf`
+- PIR sensor connected via GPIO pin 4
+- a folder called `music` in the same path as the program binary
+- `music` folder must contain only song files, no sub directories
+- `mpv` installed
+
+## TODO
+- allow for configuration of GPIO pin, folder location, music client
+- enable usage of sub directories
+- touchscreen-friendly frontend for pause, play, skip, etc.
+- support for subsonic servers
