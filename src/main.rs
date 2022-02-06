@@ -1,12 +1,35 @@
+use gpio::sysfs::SysFsGpioInput;
 use gpio::{GpioIn, GpioValue};
 use rand::{seq::SliceRandom, thread_rng};
-use std::{fs, process::Command, process::Stdio, thread, time};
+use std::{env, fs, io, process::Command, process::Stdio, thread, time};
+use std::io::Write;
 
 fn main() {
     // Opening the occupied GPIO pin.
     let mut gpio_input = gpio::sysfs::SysFsGpioInput::open(4).unwrap();
 
-    // Get all songs to play.
+    let args: Vec<String> = env::args().collect();
+    if args.len() > 1 && args[1] == "--debug" {
+        debug_loop(&mut gpio_input)
+    } else {
+        player_loop(&mut gpio_input)
+    }
+}
+
+/// Just a simple loop to check, whether the PIR sensor is giving expected output.
+fn debug_loop(gpio_input: &mut SysFsGpioInput) -> ! {
+    loop {
+        match gpio_input.read_value().unwrap() {
+            GpioValue::Low => print!("."),
+            GpioValue::High => print!("!")
+        }
+        // Must flush in order for print! to show up immediately.
+        io::stdout().flush().unwrap();
+        thread::sleep(time::Duration::from_millis(500));
+    }
+}
+
+fn player_loop(gpio_input: &mut SysFsGpioInput) -> ! {
     let mut song_paths: Vec<String> = get_song_paths();
 
     println!("Starting loop...");

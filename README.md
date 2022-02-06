@@ -12,6 +12,9 @@ detects motion.
 - `music` folder must contain only song files, no sub directories
 - `mpv` installed
 
+## Debugging
+Running the binary with `--debug` will print PIR sensor readings.
+
 ## TODO
 - allow for configuration of GPIO pin, folder location, music client
 - enable usage of sub directories
