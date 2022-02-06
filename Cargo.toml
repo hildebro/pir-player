@@ -1,5 +1,5 @@
 [package]
-name = "pir-player-rs"
+name = "pir-player"
 version = "0.1.0"
 authors = ["Alexander Hildebrandt <alex@hilde.dev>"]
 edition = "2018"
