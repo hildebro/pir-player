@@ -9,14 +9,11 @@ fn main() {
     // Get all songs to play.
     let mut song_paths: Vec<String> = get_song_paths();
 
-    println!("Waiting for motion...");
-
+    println!("Starting loop...");
     loop {
-        // Loop has a 1 second heartbeat.
-        thread::sleep(time::Duration::from_millis(1000));
-
         if gpio_input.read_value().unwrap() != GpioValue::High {
             // Nothing to do, if no motion is detected by the sensor.
+            thread::sleep(time::Duration::from_millis(1000));
             continue;
         }
 
