@@ -8,7 +8,7 @@ detects motion.
 
 ## Requirements
 - PIR sensor connected via GPIO pin 4
-- a folder called `music` in the same path as the program binary
+- a folder called `music` in the working directory
 - `music` folder must contain only song files, no sub directories
 - `mpv` installed
 
