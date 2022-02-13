@@ -3,7 +3,8 @@ Rust program to automatically play songs, when a GPIO-connected PIR sensor
 detects motion.
 
 ## Building from source for Raspberry Pi 0/1
-- install `cross`
+- install `cross` and `docker`
+- run `docker build -t custom-cross cross/`
 - run `cross build --target arm-unknown-linux-gnueabihf`
 
 ## Requirements
@@ -11,6 +12,13 @@ detects motion.
 - a folder called `music` in the working directory
 - `music` folder must contain only song files, no sub directories
 - `mpv` installed
+
+## Scheduled process
+If you don't want the player to be active at night, use this crontab:
+```
+0 6 * * * cd /home/pi && /home/pi/pir-player >> /home/pi/output.log 2>&1
+0 1 * * * killall /home/pi/pir-player && killall mpv
+```
 
 ## Debugging
 Running the binary with `--debug` will print PIR sensor readings.

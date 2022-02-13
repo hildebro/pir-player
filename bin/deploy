@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Some best practice settings for bash scripts
+# set -e: automatically exits on any failing command
+# set -u: exits if there are any unset variables
+# set -o pipefail: automatically exits, if any command in a pipe fails (normally only the last is counted)
+set -euo pipefail
+
+# Build for target
+cross build --target arm-unknown-linux-gnueabihf
+# Move to target
+scp target/arm-unknown-linux-gnueabihf/debug/pir-player juker:
