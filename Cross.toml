@@ -1,2 +1,2 @@
 [target.arm-unknown-linux-gnueabihf]
-image = "custom-cross"
+image = "zenria/cross:arm-rpi-4.9.3-linux-gnueabihf"

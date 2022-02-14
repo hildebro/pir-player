@@ -1,7 +1,7 @@
 use gpio::sysfs::SysFsGpioInput;
 use gpio::{GpioIn, GpioValue};
 use rand::{seq::SliceRandom, thread_rng};
-use std::{env, fs, io, process::Command, process::Stdio, thread, time};
+use std::{env, fs, io, thread, time};
 use std::fs::File;
 use std::io::{BufReader, Write};
 use rodio::{Decoder, OutputStream, Sink};
