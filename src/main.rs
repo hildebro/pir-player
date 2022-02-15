@@ -1,10 +1,8 @@
 use gpio::sysfs::SysFsGpioInput;
 use gpio::{GpioIn, GpioValue};
 use rand::{seq::SliceRandom, thread_rng};
-use std::{env, fs, io, thread, time};
-use std::fs::File;
-use std::io::{BufReader, Write};
-use rodio::{Decoder, OutputStream, Sink};
+use std::{env, fs, io, process::Command, process::Stdio, thread, time};
+use std::io::Write;
 
 fn main() {
     // Opening the occupied GPIO pin.
@@ -55,23 +53,12 @@ fn player_loop(gpio_input: &mut SysFsGpioInput) -> ! {
 
         // Play the current song and wait until it's finished.
         println!("Now playing: {}", current_song);
-        let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-        let sink = Sink::try_new(&stream_handle).unwrap();
-        // Load a sound from a file
-        let file = BufReader::new(File::open(current_song).unwrap());
-        // Decode that sound file into a source
-        let source = Decoder::new(file).unwrap();
-        sink.append(source);
-        // The sound plays in a separate thread. This call will block the current thread until the \
-        // sink has finished playing all its queued sounds.
-        sink.sleep_until_end();
-
-        // Command::new("mpv")
-        //     .arg(current_song)
-        //     .arg("--no-video")
-        //     .stdout(Stdio::null())
-        //     .status()
-        //     .expect("failed to execute process");
+        Command::new("cvlc")
+            .arg(current_song)
+            .arg("vlc://quit")
+            .stdout(Stdio::null())
+            .status()
+            .expect("failed to execute process");
         println!("Song finished, waiting for motion...");
     }
 }
