@@ -114,6 +114,11 @@ fn get_song_paths() -> Vec<String> {
         song_paths.push(song_path);
     }
 
+    if song_paths.len() == 0 {
+        eprintln!("Music directory is empty!");
+        std::process::exit(exitcode::DATAERR);
+    }
+
     // Shuffle the songs
     song_paths.shuffle(&mut thread_rng());
 
