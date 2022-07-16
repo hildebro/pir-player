@@ -1,14 +1,12 @@
 FROM ghcr.io/cross-rs/arm-unknown-linux-gnueabihf:latest
 
-RUN apt-get install -y curl && \
-    curl -sL https://github.com/raspberrypi/tools/archive/5caa7046982f0539cf5380f94da04b31129ed521.tar.gz  | tar xzf - -C /usr/local --strip-components=1
-
-RUN rm -rf /usr/arm-linux-gnu*
-
-RUN mv /usr/local/arm-bcm2708/arm-rpi-4.9.3-linux-gnueabihf /usr/arm-linux-gnueabihf
-
-RUN rm -rf /usr/local/arm-bcm2708
+# add our foreign architecture and install our dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends apt-utils
+RUN dpkg --add-architecture armhf
 
 RUN dpkg --add-architecture arm64 && \
     apt-get update && \
     apt-get install sqlite3 -y
+
+# add our linker search paths and link arguments
+ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_RUSTFLAGS="-L /usr/lib/arm-linux-gnueabihf -C link-args=-Wl,-rpath-link,/usr/lib/arm-linux-gnueabihf $CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_RUSTFLAGS"
