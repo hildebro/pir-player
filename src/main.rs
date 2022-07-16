@@ -3,10 +3,21 @@ use std::{env, fs, io, process::Command, process::Stdio, thread, time};
 
 use gpio::{GpioIn, GpioValue};
 use rand::{seq::SliceRandom, thread_rng};
+use rusqlite::{Connection, OptionalExtension};
 
-fn main() {
+fn main() -> ! {
+    // Create the database, if not present.
+    let conn = Connection::open("songs.db").unwrap();
+    conn.execute(
+        "create table if not exists songs (
+             position integer primary key,
+             path text not null
+         )",
+        [],
+    )
+    .unwrap();
+
     let args: Vec<String> = env::args().collect();
-
     if args.len() <= 1 {
         player_loop()
     }
@@ -22,44 +33,30 @@ fn main() {
     }
 }
 
-/// Loop for testing the music player functionality. Instead of probing the sensor, just play songs
-/// one after the other.
+/// Loop for testing the music player functionality. Instead of probing the sensor, just play all
+/// songs one after the other.
 fn dev_loop() -> ! {
-    let mut song_paths: Vec<String> = get_song_paths();
-
+    println!("Starting loop...");
     loop {
-        // Get the next song to play
-        let current_song = match song_paths.pop() {
-            None => {
-                song_paths = get_song_paths();
-                song_paths.pop().unwrap()
-            }
-            Some(song) => song,
-        };
-
-        // Play the current song and wait until it's finished.
-        println!("Now playing: {}", current_song);
-        Command::new("cvlc")
-            .arg(current_song)
-            .arg("vlc://quit")
-            .stdout(Stdio::null())
-            .status()
-            .expect("failed to execute process");
-        println!("Song finished, waiting for motion...");
+        let song_path = get_next_song_path();
+        play_song(&song_path);
+        remove_song(song_path);
     }
 }
 
-/// Just a simple loop to check, whether the PIR sensor is giving expected output. Instead of
-/// playing a song on movement, the program prints `!` in the terminal.
+/// Loop for testing the pir sensor functionality. Plays no songs, just prints either `.` or `!`
+/// constantly depending on whether motion is detected at the moment.
 fn quiet_loop() -> ! {
     // Opening the occupied GPIO pin.
     let mut gpio_input = gpio::sysfs::SysFsGpioInput::open(4).unwrap();
+
+    println!("Starting loop...");
     loop {
         match gpio_input.read_value().unwrap() {
             GpioValue::Low => print!("."),
             GpioValue::High => print!("!"),
         }
-        // Must flush in order for print! to show up immediately.
+        // Must flush to get the output of `print!` to show up immediately.
         io::stdout().flush().unwrap();
         thread::sleep(time::Duration::from_millis(500));
     }
@@ -69,8 +66,6 @@ fn quiet_loop() -> ! {
 fn player_loop() -> ! {
     // Opening the occupied GPIO pin.
     let mut gpio_input = gpio::sysfs::SysFsGpioInput::open(4).unwrap();
-
-    let mut song_paths: Vec<String> = get_song_paths();
 
     println!("Starting loop...");
     loop {
@@ -82,32 +77,56 @@ fn player_loop() -> ! {
 
         println!("Motion detected!");
 
-        // Get the next song to play
-        let current_song = match song_paths.pop() {
-            None => {
-                song_paths = get_song_paths();
-                song_paths.pop().unwrap()
-            }
-            Some(song) => song,
-        };
+        let song_path = get_next_song_path();
+        play_song(&song_path);
+        remove_song(song_path);
 
-        // Play the current song and wait until it's finished.
-        println!("Now playing: {}", current_song);
-        Command::new("cvlc")
-            .arg(current_song)
-            .arg("vlc://quit")
-            .stdout(Stdio::null())
-            .status()
-            .expect("failed to execute process");
-        println!("Song finished, waiting for motion...");
+        println!("Waiting for motion...");
     }
 }
 
-/// Grabs the song paths from the desired folder and puts them into a vector for convenience.
-fn get_song_paths() -> Vec<String> {
-    println!("Generating song paths...");
+fn get_next_song_path() -> String {
+    let conn = Connection::open("songs.db").unwrap();
+    let next_song: Option<String> = conn
+        .query_row(
+            "select path from songs order by position limit 1",
+            [],
+            |row| row.get(0),
+        )
+        .optional()
+        .unwrap();
+
+    match next_song {
+        Some(song) => song,
+        None => populate_db(),
+    }
+}
+
+/// Plays the song at the given path and waits until it's finished.
+fn play_song(song_path: &String) -> () {
+    println!("Now playing: {}", song_path);
+    Command::new("cvlc")
+        .arg(&song_path)
+        .arg("vlc://quit")
+        .stdout(Stdio::null())
+        .status()
+        .expect("failed to execute process");
+}
+
+/// Remove the given song from the database.
+/// TODO Use position instead as it is the primary key.
+fn remove_song(song_path: String) -> () {
+    let conn = Connection::open("songs.db").unwrap();
+    conn.execute("delete from songs where path = ?", [song_path])
+        .unwrap();
+}
+
+/// Fill the database with song paths in random order and return the first one.
+fn populate_db() -> String {
+    println!("Populate database with songs from directory...");
     let paths = fs::read_dir("./music").unwrap();
 
+    // Collect the song paths in a vector.
     let mut song_paths: Vec<String> = Vec::new();
     for path in paths {
         let song_path = path.unwrap().path().to_str().unwrap().to_string();
@@ -119,8 +138,15 @@ fn get_song_paths() -> Vec<String> {
         std::process::exit(exitcode::DATAERR);
     }
 
-    // Shuffle the songs
+    // Shuffle the songs.
     song_paths.shuffle(&mut thread_rng());
 
-    song_paths
+    // Add all shuffled songs to the database.
+    let conn = Connection::open("songs.db").unwrap();
+    for song_path in song_paths.clone() {
+        conn.execute("insert into songs (path) values (?)", [song_path])
+            .unwrap();
+    }
+
+    song_paths.first().unwrap().to_string()
 }
