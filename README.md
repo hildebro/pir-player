@@ -10,20 +10,21 @@ detects motion.
 - PIR sensor connected via GPIO pin 4
 - a folder called `music` in the working directory
 - `music` folder must contain only song files, no sub directories
-- `mpv` installed
+- `vlc` installed
 
 ## Scheduled process
 If you don't want the player to be active at night, use this crontab:
 ```
 0 6 * * * cd /home/pi && /home/pi/pir-player >> /home/pi/output.log 2>&1
-0 1 * * * killall /home/pi/pir-player && killall mpv
+0 1 * * * killall /home/pi/pir-player && killall cvlc
 ```
 
 ## Debugging
-Running the binary with `--debug` will print PIR sensor readings.
+Run the binary with `-d` to debug the music player.  
+Run the binary with `-q` to debug the sensor.
 
 ## TODO
 - allow for configuration of GPIO pin, folder location, music client
 - enable usage of sub directories
 - touchscreen-friendly frontend for pause, play, skip, etc.
-- support for subsonic servers
+- support for remote file playback
