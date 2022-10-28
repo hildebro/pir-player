@@ -15,7 +15,9 @@ detects motion.
 ## Scheduled process
 If you don't want the player to be active at night, use this crontab:
 ```
-0 6 * * * cd /home/pi && /home/pi/pir-player >> /home/pi/output.log 2>&1
+# Check every minute from 6am to 12am that the player is running. If not, start it up.
+0/1 6 * * * ps aux | rg pir-player | rg -v 'rg pir-player' > /dev/null || cd /home/pi && /home/pi/pir-player >> /home/pi/output.log 2>&1
+# Close the player at 1am.
 0 1 * * * killall /home/pi/pir-player && killall cvlc
 ```
 
