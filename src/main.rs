@@ -1,11 +1,14 @@
-use std::io::Write;
-use std::{env, fs, io, process::Command, process::Stdio, thread, time};
+use std::{env, fs};
+use std::io::{self, Write};
+use std::process::{Command, Stdio};
+use std::thread::sleep;
+use std::time::Duration;
 
-use gpio::{GpioIn, GpioValue};
 use rand::{seq::SliceRandom, thread_rng};
 use rusqlite::{Connection, OptionalExtension};
+use sysfs_gpio::{Direction, Pin};
 
-fn main() -> ! {
+fn main() {
     // Create the database, if not present.
     let conn = Connection::open("songs.db").unwrap();
     conn.execute(
@@ -14,9 +17,9 @@ fn main() -> ! {
              path text not null
          )",
         [],
-    )
-    .unwrap();
+    ).unwrap();
 
+    // Check for command line arguments to run different functionality.
     let args: Vec<String> = env::args().collect();
     if args.len() <= 1 {
         player_loop()
@@ -46,43 +49,52 @@ fn dev_loop() -> ! {
 
 /// Loop for testing the pir sensor functionality. Plays no songs, just prints either `.` or `!`
 /// constantly depending on whether motion is detected at the moment.
-fn quiet_loop() -> ! {
-    // Opening the occupied GPIO pin.
-    let mut gpio_input = gpio::sysfs::SysFsGpioInput::open(4).unwrap();
-
-    println!("Starting loop...");
-    loop {
-        match gpio_input.read_value().unwrap() {
-            GpioValue::Low => print!("."),
-            GpioValue::High => print!("!"),
+fn quiet_loop() {
+    // Initialize the GPIO pin on which the pir sensor is hooked up.
+    let pir_sensor = Pin::new(60);
+    pir_sensor.with_exported(|| {
+        pir_sensor.set_direction(Direction::In).unwrap();
+        println!("Starting loop...");
+        loop {
+            // Check the sensor value and print about it.
+            let current_value = pir_sensor.get_value()?;
+            if current_value == 1 {
+                print!("!")
+            } else {
+                print!(".")
+            }
+            sleep(Duration::from_millis(100));
+            // Must flush to get the output of `print!` to show up immediately.
+            io::stdout().flush().unwrap();
         }
-        // Must flush to get the output of `print!` to show up immediately.
-        io::stdout().flush().unwrap();
-        thread::sleep(time::Duration::from_millis(500));
-    }
+    }).unwrap()
 }
 
 /// Loop that awaits movement and then plays a song. Afterwards, return to awaiting movement.
-fn player_loop() -> ! {
-    // Opening the occupied GPIO pin.
-    let mut gpio_input = gpio::sysfs::SysFsGpioInput::open(4).unwrap();
+fn player_loop() {
+    // Initialize the GPIO pin on which the pir sensor is hooked up.
+    let pir_sensor = Pin::new(60);
+    pir_sensor.with_exported(|| {
+        pir_sensor.set_direction(Direction::In).unwrap();
+        println!("Starting loop...");
+        loop {
+            // Check the sensor value and print about it.
+            let current_value = pir_sensor.get_value()?;
+            if current_value == 0 {
+                // Nothing to do, if no motion is detected by the sensor.
+                sleep(Duration::from_secs(1));
+                continue;
+            }
 
-    println!("Starting loop...");
-    loop {
-        if gpio_input.read_value().unwrap() != GpioValue::High {
-            // Nothing to do, if no motion is detected by the sensor.
-            thread::sleep(time::Duration::from_millis(1000));
-            continue;
+            println!("Motion detected!");
+
+            let song_path = get_next_song_path();
+            play_song(&song_path);
+            remove_song(song_path);
+
+            println!("Song done, back to waiting for motion...");
         }
-
-        println!("Motion detected!");
-
-        let song_path = get_next_song_path();
-        play_song(&song_path);
-        remove_song(song_path);
-
-        println!("Waiting for motion...");
-    }
+    }).unwrap()
 }
 
 fn get_next_song_path() -> String {

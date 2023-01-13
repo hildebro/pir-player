@@ -6,6 +6,6 @@
 set -euo pipefail
 
 # Build for target
-cross build --target arm-unknown-linux-gnueabihf --release
+cross build --target armv7-unknown-linux-musleabihf --release
 # Move to target
-scp target/arm-unknown-linux-gnueabihf/release/pir-player juker:
+scp target/armv7-unknown-linux-musleabihf/release/pir-player juker:

@@ -11,6 +11,6 @@ default = ["rusqlite/bundled"]
 
 [dependencies]
 exitcode = "1.1.2"
-gpio = "0.4.1"
 rand = "0.8.4"
-rusqlite = "0.27.0"
+rusqlite = "0.28.0"
+sysfs_gpio = "0.6.1"
