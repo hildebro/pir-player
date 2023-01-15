@@ -1,6 +1,7 @@
 use std::{env, fs};
 use std::io::{self, Write};
-use std::process::{Command, Stdio};
+use std::path::PathBuf;
+use std::process::Command;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -117,10 +118,12 @@ fn get_next_song_path() -> String {
 /// Plays the song at the given path and waits until it's finished.
 fn play_song(song_path: &String) -> () {
     println!("Now playing: {}", song_path);
-    Command::new("cvlc")
+    Command::new("mpg123")
+        // TODO call `id -u` to get the right value for this and save it via lazy static
+        .env("XDG_RUNTIME_DIR", "/run/user/1000")
+        .arg("--no-control")
+        .arg("-q")
         .arg(&song_path)
-        .arg("vlc://quit")
-        .stdout(Stdio::null())
         .status()
         .expect("failed to execute process");
 }
@@ -136,13 +139,14 @@ fn remove_song(song_path: String) -> () {
 /// Fill the database with song paths in random order and return the first one.
 fn populate_db() -> String {
     println!("Populate database with songs from directory...");
-    let paths = fs::read_dir("./music").unwrap();
+    // TODO Create config file for setting the music directory
+    let paths = fs::read_dir("/mnt/music").unwrap();
 
     // Collect the song paths in a vector.
     let mut song_paths: Vec<String> = Vec::new();
     for path in paths {
-        let song_path = path.unwrap().path().to_str().unwrap().to_string();
-        song_paths.push(song_path);
+        let path_buf = path.unwrap().path();
+        resolve_music_files(&mut song_paths, path_buf);
     }
 
     if song_paths.len() == 0 {
@@ -161,4 +165,20 @@ fn populate_db() -> String {
     }
 
     song_paths.first().unwrap().to_string()
+}
+
+/// Check the given path (including sub directories) for mp3 files and add them into song_paths.
+fn resolve_music_files(song_paths: &mut Vec<String>, path_buf: PathBuf) {
+    if path_buf.is_dir() {
+        let sub_paths = path_buf.read_dir().unwrap();
+        for sub_path in sub_paths {
+            resolve_music_files(song_paths, sub_path.unwrap().path())
+        }
+    }
+
+    // Only put mp3 files into the vector (so files like album cover images are ignored).
+    let file_path = path_buf.to_str().unwrap().to_string();
+    if file_path.ends_with(".mp3") {
+        song_paths.push(file_path);
+    }
 }
